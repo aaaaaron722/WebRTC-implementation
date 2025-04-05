@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebRTC Demo</title>
+</head>
+<body>
+  <h2>WebRTC Demo</h2>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <script>
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+    const socket = new WebSocket("ws://localhost:3000");
+
+    let localStream;
+    let peer;
+
+    // 取得攝影機
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localVideo.srcObject = stream;
+        localStream = stream;
+      })
+      .catch(err => {
+        console.error("Error accessing media devices:", err);
+        alert("無法存取攝影機或麥克風，請檢查權限設定。");
+      });
+
+    // WebSocket 訊息處理
+    socket.onmessage = async ({ data }) => {
+      try {
+        const msg = JSON.parse(data);
+        if (msg.offer) {
+          peer = createPeer();
+          await peer.setRemoteDescription(new RTCSessionDescription(msg.offer));
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+          sendMessage({ answer });
+        } else if (msg.answer) {
+          await peer.setRemoteDescription(new RTCSessionDescription(msg.answer));
+        } else if (msg.candidate) {
+          await peer.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        }
+      } catch (err) {
+        console.error("Error handling WebSocket message:", err);
+      }
+    };
+
+    // 建立 PeerConnection
+    function createPeer() {
+      const peer = new RTCPeerConnection();
+      peer.onicecandidate = e => {
+        if (e.candidate) sendMessage({ candidate: e.candidate });
+      };
+      peer.ontrack = e => {
+        remoteVideo.srcObject = e.streams[0];
+      };
+      localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+      return peer;
+    }
+
+    // 發送訊息的輔助函式
+    function sendMessage(message) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+      } else {
+        console.error("WebSocket is not open. Unable to send message:", message);
+      }
+    }
+
+    // 開始通話
+    window.startCall = async () => {
+      try {
+        peer = createPeer();
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        sendMessage({ offer });
+      } catch (err) {
+        console.error("Error starting call:", err);
+      }
+    };
+  </script>
+  <button onclick="startCall()">開始通話</button>
+</body>
+</html>
