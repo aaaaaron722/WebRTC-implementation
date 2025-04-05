@@ -29,22 +29,35 @@
     // WebSocket 訊息處理
     socket.onmessage = async ({ data }) => {
       try {
-        const msg = JSON.parse(data); // 修正錯誤
-        if (msg.offer) {
-          peer = createPeer();
-          await peer.setRemoteDescription(new RTCSessionDescription(msg.offer));
-          const answer = await peer.createAnswer();
-          await peer.setLocalDescription(answer);
-          sendMessage({ answer });
-        } else if (msg.answer) {
-          await peer.setRemoteDescription(new RTCSessionDescription(msg.answer));
-        } else if (msg.candidate) {
-          await peer.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        // 如果收到的資料是 Blob 格式，就處理它
+        if (data instanceof Blob) {
+          const text = await data.text(); // 將 Blob 轉為文字
+          const msg = JSON.parse(text); // 解析成 JSON
+          handleMessage(msg); // 你可以寫一個處理訊息的函數來簡化這段代碼
+        } else {
+          const msg = JSON.parse(data); // 直接解析字串
+          handleMessage(msg);
         }
       } catch (err) {
         console.error("Error handling WebSocket message:", err);
       }
     };
+
+    // 訊息處理函數
+    function handleMessage(msg) {
+      if (msg.offer) {
+        peer = createPeer();
+        peer.setRemoteDescription(new RTCSessionDescription(msg.offer));
+        peer.createAnswer().then(answer => {
+          peer.setLocalDescription(answer);
+          sendMessage({ answer });
+        });
+      } else if (msg.answer) {
+        peer.setRemoteDescription(new RTCSessionDescription(msg.answer));
+      } else if (msg.candidate) {
+        peer.addIceCandidate(new RTCIceCandidate(msg.candidate));
+      }
+    }
 
     // 建立 PeerConnection
     function createPeer() {
