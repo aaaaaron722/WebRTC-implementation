@@ -10,7 +10,7 @@
   <script>
     const localVideo = document.getElementById("localVideo");
     const remoteVideo = document.getElementById("remoteVideo");
-    const socket = new WebSocket("ws://localhost:3000");
+    const socket = new WebSocket("ws://192.168.0.202:3000");
 
     let localStream;
     let peer;
@@ -29,7 +29,7 @@
     // WebSocket 訊息處理
     socket.onmessage = async ({ data }) => {
       try {
-        const msg = JSON.parse(data);
+        const msg = JSON.parse(data);l
         if (msg.offer) {
           peer = createPeer();
           await peer.setRemoteDescription(new RTCSessionDescription(msg.offer));
