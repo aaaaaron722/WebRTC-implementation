@@ -33,7 +33,7 @@
         if (data instanceof Blob) {
           const text = await data.text(); // 將 Blob 轉為文字
           const msg = JSON.parse(text); // 解析成 JSON
-          handleMessage(msg); // 你可以寫一個處理訊息的函數來簡化這段代碼
+          handleMessage(msg); // 處理訊息
         } else {
           const msg = JSON.parse(data); // 直接解析字串
           handleMessage(msg);
@@ -65,11 +65,16 @@
       peer.onicecandidate = e => {
         if (e.candidate) sendMessage({ candidate: e.candidate });
       };
+
       peer.ontrack = e => {
         console.log("Received remote stream");
-        remoteVideo.srcObject = e.streams[0]; // 設置遠端視頻流
+        // 設置遠端視頻流，確保對方的畫面顯示
+        remoteVideo.srcObject = e.streams[0];
       };
+
+      // 將本地的媒體流加到 PeerConnection
       localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+
       return peer;
     }
 
