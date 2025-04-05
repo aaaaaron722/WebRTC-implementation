@@ -29,7 +29,7 @@
     // WebSocket 訊息處理
     socket.onmessage = async ({ data }) => {
       try {
-        const msg = JSON.parse(data);l
+        const msg = JSON.parse(data); // 修正錯誤
         if (msg.offer) {
           peer = createPeer();
           await peer.setRemoteDescription(new RTCSessionDescription(msg.offer));
@@ -53,7 +53,8 @@
         if (e.candidate) sendMessage({ candidate: e.candidate });
       };
       peer.ontrack = e => {
-        remoteVideo.srcObject = e.streams[0];
+        console.log("Received remote stream");
+        remoteVideo.srcObject = e.streams[0]; // 設置遠端視頻流
       };
       localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
       return peer;
