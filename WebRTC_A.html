@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebRTC A</title>
+</head>
+<body>
+  <h1>WebRTC A 端</h1>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <script>
+    // 這裡貼上我剛剛幫你改好的 JS 程式碼
+    const config = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" }
+      ]
+    };
+    const localConnection = new RTCPeerConnection(config);
+
+    localConnection.onicecandidate = e => {
+      if (e.candidate) {
+        console.log("NEW ice candidate!! on localconnection");
+      } else {
+        console.log("Final SDP:");
+        console.log(JSON.stringify(localConnection.localDescription));
+      }
+    };
+
+    const sendChannel = localConnection.createDataChannel("sendChannel");
+    sendChannel.onmessage = e => console.log("Message received!!! " + e.data);
+    sendChannel.onopen = e => console.log("DataChannel opened!!!!");
+    sendChannel.onclose = e => console.log("DataChannel closed!!!!!!");
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+      document.getElementById("localVideo").srcObject = stream;
+      stream.getTracks().forEach(track => {
+        localConnection.addTrack(track, stream);
+      });
+      return localConnection.createOffer();
+    }).then(offer => {
+      return localConnection.setLocalDescription(offer);
+    });
+  </script>
+</body>
+</html>

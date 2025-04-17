@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebRTC B</title>
+</head>
+<body>
+  <h1>WebRTC B 端</h1>
+  <video id="remoteVideo" autoplay playsinline></video>
+
+  <script>
+    // 貼上從 A 拿到的 offer SDP
+    const offer = {"type":"offer","sdp":"v=0\r\no=- 8813985652238161884 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\na=candidate:447970919 1 udp 2113937151 d2c14f77-cc2a-4abf-bc3c-32297c6efc07.local 60697 typ host generation 0 network-cost 999\r\na=ice-ufrag:+Bw8\r\na=ice-pwd:SekloIqJlJZ1O+3CUEABLNsd\r\na=ice-options:trickle\r\na=fingerprint:sha-256 6C:E7:18:F2:A6:1E:35:E8:87:9D:C9:B1:78:8F:57:C2:6C:65:1E:E2:90:38:39:4F:AC:1D:A7:A9:9E:1D:C5:48\r\na=setup:actpass\r\na=mid:0\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n"};
+
+    const config = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" }
+      ]
+    };
+    const remoteConnection = new RTCPeerConnection(config);
+
+    // 處理 ICE
+    remoteConnection.onicecandidate = e => {
+      if (e.candidate) {
+        console.log("NEW ice candidate!! on remoteConnection");
+      } else {
+        console.log("Final Answer SDP:");
+        console.log(JSON.stringify(remoteConnection.localDescription));
+      }
+    };
+
+    // 處理 Data Channel
+    remoteConnection.ondatachannel = e => {
+      const receiveChannel = e.channel;
+      receiveChannel.onmessage = e => console.log("Message received!!! " + e.data);
+      receiveChannel.onopen = e => console.log("DataChannel open!!!!");
+      receiveChannel.onclose = e => console.log("DataChannel closed!!!!!!");
+    };
+
+    // 顯示遠端影像
+    remoteConnection.ontrack = event => {
+      const [stream] = event.streams;
+      document.getElementById("remoteVideo").srcObject = stream;
+    };
+
+    // 開始處理流程
+    remoteConnection.setRemoteDescription(offer).then(() => {
+      return remoteConnection.createAnswer();
+    }).then(answer => {
+      return remoteConnection.setLocalDescription(answer);
+    });
+  </script>
+</body>
+</html>
