@@ -5,39 +5,88 @@
 </head>
 <body>
   <h1>WebRTC A 端</h1>
-  <video id="localVideo" autoplay playsinline muted></video>
+
+  <textarea id="offer" cols="80" rows="10" placeholder="這邊會產生 Offer"></textarea><br>
+  <button onclick="createOffer()">建立連線</button><br><br>
+
+  <textarea id="answer" cols="80" rows="10" placeholder="請貼上 B 的 Answer"></textarea><br>
+  <button onclick="setAnswer()">設定 Answer</button><br><br>
+
+  <input type="text" id="messageInput" placeholder="輸入訊息">
+  <button onclick="sendMessage()">傳送訊息</button><br><br>
+
+  <p id="status">狀態：尚未建立連線</p>
+  <h3>收到的訊息：</h3>
+  <div id="messages" style="white-space: pre-wrap;"></div>
+
   <script>
-    // 這裡貼上我剛剛幫你改好的 JS 程式碼
     const config = {
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" }
-      ]
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     };
     const localConnection = new RTCPeerConnection(config);
+    let sendChannel;
+
+    const statusText = document.getElementById("status");
 
     localConnection.onicecandidate = e => {
-      if (e.candidate) {
-        console.log("NEW ice candidate!! on localconnection");
-      } else {
-        console.log("Final SDP:");
-        console.log(JSON.stringify(localConnection.localDescription));
+      if (!e.candidate) {
+        document.getElementById("offer").value = JSON.stringify(localConnection.localDescription);
       }
     };
 
-    const sendChannel = localConnection.createDataChannel("sendChannel");
-    sendChannel.onmessage = e => console.log("Message received!!! " + e.data);
-    sendChannel.onopen = e => console.log("DataChannel opened!!!!");
-    sendChannel.onclose = e => console.log("DataChannel closed!!!!!!");
+    function createOffer() {
+      sendChannel = localConnection.createDataChannel("sendChannel");
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-      document.getElementById("localVideo").srcObject = stream;
-      stream.getTracks().forEach(track => {
-        localConnection.addTrack(track, stream);
-      });
-      return localConnection.createOffer();
-    }).then(offer => {
-      return localConnection.setLocalDescription(offer);
-    });
+      sendChannel.onopen = () => {
+        console.log("DataChannel opened");
+        statusText.textContent = "狀態：連線成功 ✅";
+      };
+
+      sendChannel.onclose = () => {
+        console.log("DataChannel closed");
+        statusText.textContent = "狀態：連線關閉 ❌";
+      };
+
+      sendChannel.onerror = (e) => {
+        console.error("DataChannel 錯誤：", e);
+        statusText.textContent = "狀態：連線錯誤 ❗";
+      };
+
+      sendChannel.onmessage = e => {
+        document.getElementById("messages").textContent += "👂 收到: " + e.data + "\n";
+      };
+
+      localConnection.createOffer()
+        .then(offer => localConnection.setLocalDescription(offer))
+        .catch(err => {
+          console.error("建立 Offer 失敗：", err);
+          statusText.textContent = "狀態：建立 Offer 失敗 ❗";
+        });
+    }
+
+    function setAnswer() {
+      const answer = JSON.parse(document.getElementById("answer").value);
+      localConnection.setRemoteDescription(answer)
+        .then(() => {
+          console.log("Answer 已設定");
+          statusText.textContent = "狀態：等待 DataChannel 開啟中…";
+        })
+        .catch(err => {
+          console.error("設定 Answer 失敗：", err);
+          statusText.textContent = "狀態：設定 Answer 失敗 ❌";
+        });
+    }
+
+    function sendMessage() {
+      const msg = document.getElementById("messageInput");
+      if (sendChannel && sendChannel.readyState === "open") {
+        sendChannel.send(msg.value);
+        document.getElementById("messages").textContent += "🧑‍💻 發送: " + msg.value + "\n";
+        msg.value = "";
+      } else {
+        alert("DataChannel 尚未開啟！");
+      }
+    }
   </script>
 </body>
 </html>
