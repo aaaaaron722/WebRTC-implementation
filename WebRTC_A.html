@@ -1,10 +1,12 @@
+<!-- ✅ WebRTC A with video media track -->
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebRTC A</title>
+  <title>WebRTC A with Video</title>
 </head>
 <body>
   <h1>WebRTC A 端</h1>
+  <video id="localVideo" autoplay playsinline muted style="width:300px; border:1px solid #ccc;"></video><br>
 
   <textarea id="offer" cols="80" rows="10" placeholder="這邊會產生 Offer"></textarea><br>
   <button onclick="createOffer()">建立連線</button><br><br>
@@ -17,7 +19,7 @@
 
   <p id="status">狀態：尚未建立連線</p>
   <h3>收到的訊息：</h3>
-  <div id="messages" style="white-space: pre-wrap;"></div>
+  <div id="messages" style="white-space: pre-wrap; border:1px solid #ccc; height:100px; overflow:auto;"></div>
 
   <script>
     const config = {
@@ -27,12 +29,20 @@
     let sendChannel;
 
     const statusText = document.getElementById("status");
+    const messages = document.getElementById("messages");
 
     localConnection.onicecandidate = e => {
       if (!e.candidate) {
         document.getElementById("offer").value = JSON.stringify(localConnection.localDescription);
       }
     };
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+      document.getElementById("localVideo").srcObject = stream;
+      stream.getTracks().forEach(track => {
+        localConnection.addTrack(track, stream);
+      });
+    });
 
     function createOffer() {
       sendChannel = localConnection.createDataChannel("sendChannel");
@@ -53,7 +63,7 @@
       };
 
       sendChannel.onmessage = e => {
-        document.getElementById("messages").textContent += "👂 收到: " + e.data + "\n";
+        messages.textContent += "👂 收到: " + e.data + "\n";
       };
 
       localConnection.createOffer()
@@ -81,7 +91,7 @@
       const msg = document.getElementById("messageInput");
       if (sendChannel && sendChannel.readyState === "open") {
         sendChannel.send(msg.value);
-        document.getElementById("messages").textContent += "🧑‍💻 發送: " + msg.value + "\n";
+        messages.textContent += "🧑‍💻 發送: " + msg.value + "\n";
         msg.value = "";
       } else {
         alert("DataChannel 尚未開啟！");

@@ -1,10 +1,13 @@
+<!-- ✅ WebRTC B with video media track -->
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebRTC B</title>
+  <title>WebRTC B with Video</title>
 </head>
 <body>
   <h1>WebRTC B 端</h1>
+  <video id="remoteVideo" autoplay playsinline style="width:300px; border:1px solid #ccc;"></video><br>
+
   <textarea id="offer" cols="80" rows="10" placeholder="貼上 A 給的 Offer"></textarea><br>
   <button onclick="createAnswer()">建立 Answer</button><br><br>
 
@@ -14,7 +17,7 @@
   <button onclick="sendMessage()">送出</button>
 
   <h3>收到的訊息</h3>
-  <div id="messages" style="white-space: pre-wrap;"></div>
+  <div id="messages" style="white-space: pre-wrap; border:1px solid #ccc; height:100px; overflow:auto;"></div>
 
   <script>
     const config = {
@@ -30,6 +33,11 @@
       };
       receiveChannel.onopen = () => console.log("✅ DataChannel open!!!!");
       receiveChannel.onclose = () => console.log("❌ DataChannel closed!");
+    };
+
+    remoteConnection.ontrack = event => {
+      const [stream] = event.streams;
+      document.getElementById("remoteVideo").srcObject = stream;
     };
 
     remoteConnection.onicecandidate = e => {
